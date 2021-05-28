@@ -1,0 +1,1 @@
+{"exp_name": "test", "in_data_zip": "data/iaa_set_dnaf.zip", "mother_out_dir": "out", "match_fn": "functools.partial(<function _wrap_matching_fn.<locals>.f at 0x7fa0d63a5160>, fuzzy_matching_fn=<function _fallback_match at 0x7fa0d6397550>)"}
