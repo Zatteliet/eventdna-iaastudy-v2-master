@@ -6,13 +6,13 @@ However, the search for heads in annotations is defined and parametrized in `alp
 
 import csv
 import json
+import sys
 import zipfile
 from pathlib import Path
 
 from loguru import logger
 
 from iaastudy import alpino_heads, confusion_matrices, matching_functions, util
-
 
 CONFIG = {
     "exp_name": "test",
@@ -24,10 +24,11 @@ CONFIG = {
     # "match_fn": matching_functions.MFN_DICT["dice head 0.8"],
     # "match_fn": matching_functions.MFN_DICT["_token_set_match"],
     "match_fn": matching_functions.MFN_DICT["_fallback_match"],
+    "log_level": "INFO",
 }
 
 
-def main(in_data_zip, mother_out_dir, match_fn, exp_name=None):
+def main(in_data_zip, mother_out_dir, match_fn, log_level, exp_name=None):
 
     ## Prepare output dir.
 
@@ -42,6 +43,8 @@ def main(in_data_zip, mother_out_dir, match_fn, exp_name=None):
     out_dir.mkdir(exist_ok=True)
 
     # the log output of this script is written to a txt file in the output dir
+    logger.remove()
+    logger.add(sys.stderr, level=log_level)
     logger.add(out_dir / "log_output.txt")
 
     # also write out the config dict used for this experiment

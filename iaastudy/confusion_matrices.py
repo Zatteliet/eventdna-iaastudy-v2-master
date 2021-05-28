@@ -7,6 +7,7 @@ import pandas as pd
 import pycm
 from loguru import logger
 
+
 def cms_over_annotator_pairs(docs, target_layer, match_fn, log_outpath):
     """Given a collection of documents, create confusion matrices for each possible gold-pred pairing of annotators.
     
