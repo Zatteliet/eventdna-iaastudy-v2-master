@@ -8,14 +8,13 @@ import pycm
 from loguru import logger
 
 
-def cms_over_annotator_pairs(docs, target_layer, match_fn, log_outpath):
+def cms_over_annotator_pairs(docs, target_layer, match_fn):
     """Given a collection of documents, create confusion matrices for each possible gold-pred pairing of annotators.
     
     Args:
         docs (list of DNAF dicts): Unstructured list of EventDNA document-dicts (where each article is represented 4 times, once per annotator).
         target_layer (str): "events" or "entities".
         match_fn (Callable): a matching function as defined in the dict exported from `matching_functions.py`.
-        log_outpath (Path): the log of this script will also be written 
     
     Returns:
         dict: `pycm` confusion matrix objects, by annotator pair. E.g.
@@ -186,7 +185,7 @@ def _confusion_matrix(gold_docs, pred_docs, target_layer, match_fn):
     return cm
 
 
-def write_stats(cm_name_to_cm, outpath):
+def write_kappas(cm_name_to_cm, outpath):
     """Write the kappa scores of each cm to outpath."""
 
     r = {"kappa": {}}

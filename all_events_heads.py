@@ -45,7 +45,7 @@ def main(in_data_zip, write_out_path):
     with open(write_out_path, "w") as write_o:
 
         for dnaf_file, alpino_dir in dnafs_with_alpino_dirs:
-            alpino_heads.augment_with_heads(dnaf_file, alpino_dir)
+            alpino_heads.add_heads(dnaf_file, alpino_dir)
 
             write_o.write(
                 "\tDoc: {}, author: {}\n\n".format(

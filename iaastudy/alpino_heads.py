@@ -13,8 +13,7 @@ class AlpinoTreeHandler:
         self.node_to_parent_map = {c: p for p in self.tree.iter() for c in p}
 
     def get_parents(self, node):
-        """Return a list such that the first element is the queried node and the next are all its ancestor nodes, up to the root of the tree.
-        """
+        """Return a list such that the first element is the queried node and the next are all its ancestor nodes, up to the root of the tree."""
         parents = [node]
         while True:
             last_node = parents[-1]
@@ -25,8 +24,7 @@ class AlpinoTreeHandler:
         return parents
 
     def find_head_leaves(self):
-        """Depth-search through the tree. Only leaves are returned.
-        """
+        """Depth-search through the tree. Only leaves are returned."""
 
         ## Negative restriction
         # Travel through all nodes in the tree in depth-first fashion, starting at the root.
@@ -54,8 +52,7 @@ class AlpinoTreeHandler:
 
             # Determine whether the search for heads must stop here or continue.
             def check_stop(node):
-                """If a node gets a True check here, search stops at that node and doesn't travel deeper in the tree.
-                """
+                """If a node gets a True check here, search stops at that node and doesn't travel deeper in the tree."""
                 # ! to allow all heads, comment out the following two conditions
                 # if node.get("cat") in ["ap", "advp", "pp"]:  # "pp", "advp"
                 #     return True
@@ -117,22 +114,27 @@ class AlpinoTreeHandler:
         )
         # Sanity check: the sentence found by ordering the nodes is equal to the sentence given as a Sentence element in the xml.
         # For unknown reasons a None node is added to the list. This naively removes it (CC 13/05/2019).
-        tokens_from_sentence_nodes = [node.get("word") for node in sentence_token_nodes]
+        tokens_from_sentence_nodes = [
+            node.get("word") for node in sentence_token_nodes
+        ]
         x_tokens_by_sentence = self.tree.findall("./sentence")[0].text.split()
-        assert tokens_from_sentence_nodes == x_tokens_by_sentence, "{} != {}".format(
-            tokens_from_sentence_nodes, x_tokens_by_sentence
-        )
+        assert (
+            tokens_from_sentence_nodes == x_tokens_by_sentence
+        ), "{} != {}".format(tokens_from_sentence_nodes, x_tokens_by_sentence)
 
         # Collect information: go over token nodes and show 1 if the token is part of the list of head tokens and 0 otherwise.
         head_flags = [
-            (1 if node in leaf_hd_nodes else 0) for node in sentence_token_nodes
+            (1 if node in leaf_hd_nodes else 0)
+            for node in sentence_token_nodes
         ]
-        assert len(tokens_from_sentence_nodes) == len(head_flags)  # Sanity check.
+        assert len(tokens_from_sentence_nodes) == len(
+            head_flags
+        )  # Sanity check.
 
         return head_flags
 
 
-def augment_with_heads(dnaf, alpino_dir):
+def add_heads(dnaf, alpino_dir) -> None:
     """Add head set info to the event annotations found in the given DNAF."""
 
     # Get a dict of sentence numbers to the correct head vector.
