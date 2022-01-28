@@ -12,7 +12,7 @@ from iaastudy.cm import (
     docs_by,
     collect_cms,
     avg_cm_scores,
-    write_kappas,
+    write_report,
 )
 from iaastudy.annotators import ANNOTATORS
 from iaastudy.util import recursive_delete
@@ -42,13 +42,12 @@ def run_iaa_study(data_zip: Path, out_dir: Path, match_fn):
             add_heads(dnaf, doc.alpino)
 
     # Get confusion matrices and scores.
-    cms = collect_cms(docs=data, layer="events", match_fn=match_fn)
+    cms = list(collect_cms(docs=data, layer="events", match_fn=match_fn))
 
     # Write out the cms.
     for cm in cms:
         p = (out_dir / cm.name).with_suffix(".html")
         cm.save_html(str(p))
-        logger.success(f"Written cm: {p}")
 
     # Average the scores over all annotator pairs. Write out.
     scores = avg_cm_scores(cms)
@@ -56,8 +55,10 @@ def run_iaa_study(data_zip: Path, out_dir: Path, match_fn):
         with open((out_dir / score_name).with_suffix(".json"), "w") as f:
             json.dump(vals, f)
 
-    # Write out the kappa scores per annotator pair.
-    write_kappas(cms, outpath=(out_dir / "kappas").with_suffix(".xlsx"))
+    # Write a more straightforward score report.
+    write_report(cms, out_dir / "f1_prec_rec.txt")
+
+    logger.success(f"All done. Wrote to {out_dir}")
 
 
 def prepare(out_dir):

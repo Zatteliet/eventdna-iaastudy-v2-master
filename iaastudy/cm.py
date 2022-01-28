@@ -25,6 +25,8 @@ def collect_cms(docs, layer, match_fn):
                 match_fn=match_fn,
             )
             cm.name = f"{gold_annr} - {pred_annr}"
+            logger.success("Constructed cm: " + cm.name)
+            cm.print_matrix()
             yield cm
         except pycm.pycm_obj.pycmVectorError as e:
             logger.error(
@@ -57,8 +59,8 @@ def make_cm(gold_docs, pred_docs, target_layer, match_fn):
                 ann["home_doc"] = dnaf["meta"]["id"]
                 yield ann
 
-    gold_anns = get_anns(gold_docs, target_layer)
-    pred_anns = get_anns(pred_docs, target_layer)
+    gold_anns = list(get_anns(gold_docs, target_layer))
+    pred_anns = list(get_anns(pred_docs, target_layer))
 
     # Build found/not-found vectors.
 
@@ -144,13 +146,19 @@ def avg_cm_scores(cms):
     return {"listed_scores": listed, "averaged_scores": averaged}
 
 
-def write_kappas(cms, outpath):
-    """Write the kappa scores of each cm to outpath."""
+def write_report(cms, outpath):
+    """Write F1, PREC, REC scores of each cm to outpath."""
 
-    r = {"kappa": {}}
-    for cm in cms:
-        r["kappa"][cm.name] = cm.Kappa
+    def get_stat(cm, stat):
+        return cm.class_stat[stat][FOUND]
 
-    df = pd.DataFrame(r)
-    df.to_excel(outpath)
-    logger.info(f"Written stats to {outpath}.")
+    def stat_message(cm):
+        stats = [
+            "{}\t{}".format(stat, get_stat(cm, stat))
+            for stat in ["F1", "PPV", "TPR"]
+        ]
+        return "\n".join([cm.name] + stats)
+
+    with open(outpath, "w") as f:
+        txt = (stat_message(cm) for cm in cms)
+        f.write("\n\n".join(txt))
