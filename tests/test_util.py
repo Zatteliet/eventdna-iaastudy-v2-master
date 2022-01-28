@@ -1,4 +1,4 @@
-from iaastudy.util import map_over_leaves, merge, filter_out
+from iaastudy.util import dice_coef, filter_out, map_over_leaves, merge_list
 
 
 def test_merge():
@@ -12,7 +12,7 @@ def test_merge():
         "c": {"ca": [30, 130], "cb": [50, 150]},
     }
 
-    assert merge(cases) == expected
+    assert merge_list(cases) == expected
 
 
 def test_map_over_leaves():
@@ -44,15 +44,12 @@ def test_filter_out():
     for case, exp in zip(cases, expected):
         assert filter_out(case, condition=lambda v: isinstance(v, int)) == exp
 
-# def test_merge_with_callback():
-#     cases = [
-#         {"a": 1, "b": 2, "c": {"ca": 30, "cb": 50}},
-#         {"a": 17, "b": 18, "c": {"ca": 130, "cb": 150}},
-#     ]
-#     expected = {
-#         "a": 18,
-#         "b": 20,
-#         "c": {"ca": 160, "cb": 200},
-#     }
 
-#     assert merge(cases, callback=sum) == expected
+def test_dice():
+    a = {1, 2, 3, 4}
+    b = {5, 6, 7, 4}
+    assert dice_coef(a, b) == 0.25
+
+    a = {1, 2, 3, 4}
+    b = {5, 6, 7, 8}
+    assert dice_coef(a, b) == 0.0

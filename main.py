@@ -1,8 +1,6 @@
-from nis import match
-from unicodedata import name
 import typer
 from pathlib import Path
-from iaastudy.match_fns import fallback_match
+from iaastudy.match_fns import match_fns
 from iaastudy.iaastudy import run_iaa_study
 from loguru import logger
 import sys
@@ -13,18 +11,21 @@ DATA_ZIP = Path("data/iaa_set_dnaf.zip")
 OUT_DIR = Path("/mnt/c/Users/camie/Downloads/IAA_OUT/")
 
 
-MATCH_FN = fallback_match
+def main(data_zip: str, out_dir: str, match_fn: str):
 
+    data_zip = Path(data_zip)
+    out_dir = Path(out_dir)
+    match_fn = match_fns[match_fn]
 
-def main():
     config_logger()
-    run_iaa_study(DATA_ZIP, OUT_DIR, MATCH_FN)
+    run_iaa_study(data_zip, out_dir, match_fn)
 
 
 def config_logger():
-    handlers = [dict(sink=sys.stdout, level="INFO")]
-    logger.configure(handlers=handlers)
+    # handlers = [dict(sink=sys.stdout, level="INFO")]
+    # logger.configure(handlers=handlers)
+    pass
 
 
 if __name__ == "__main__":
-    main()
+    typer.run(main)

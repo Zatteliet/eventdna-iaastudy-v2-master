@@ -1,57 +1,71 @@
 import itertools
-from collections import defaultdict
-from pprint import pprint
 from statistics import mean
+from typing import Callable, Iterable
 
-import pandas as pd
-import pycm
 from loguru import logger
-from enum import Enum
-from iaastudy.annotators import ANNOTATORS
-from iaastudy.util import filter_out, map_over_leaves, merge
+from pycm import ConfusionMatrix
+from pycm.pycm_obj import pycmVectorError
 
+from iaastudy.defs import ANNOTATORS, DocumentSet, Layer
+from iaastudy.util import filter_out, map_over_leaves, merge_list
 
 FOUND = "Found"
 NOT_FOUND = "Not found"
 
 
-def collect_cms(docs, layer, match_fn):
+def collect_cms(
+    doc_sets: Iterable[DocumentSet], layer: Layer, match_fn: Callable
+) -> Iterable[ConfusionMatrix]:
+    """Yield confusion matrices built for each pair of annotators attested in `docs`.
+    The CM inputs are built by comparing the events found by annotators in the pairs, using `match_fn` to compare event spans.
+
+    `layer` determines whether comparisons will be made over events or entities.
+    """
+
+    layer = layer.value
+
+    def docs_by(annotator, docs):
+        for doc in docs:
+            yield doc.dnafs[annotator]
+
+    def annotator_pairs():
+        pairs = list(itertools.combinations(ANNOTATORS, 2))
+        for a1, a2 in pairs:
+            yield a1, a2
+
     for gold_annr, pred_annr in annotator_pairs():
         try:
             cm = make_cm(
-                gold_docs=docs_by(gold_annr, docs),
-                pred_docs=docs_by(pred_annr, docs),
-                target_layer=layer,
-                match_fn=match_fn,
+                docs_by(gold_annr, doc_sets),
+                docs_by(pred_annr, doc_sets),
+                layer,
+                match_fn,
             )
-            cm.name = f"{gold_annr} - {pred_annr}"
-            logger.success("Constructed cm: " + cm.name)
-            cm.print_matrix()
-            yield cm
-        except pycm.pycm_obj.pycmVectorError as e:
-            logger.error(
-                "Error on pair: {}, {}: {}".format(gold_annr, pred_annr, e)
-            )
+        except pycmVectorError as e:
+            m = f"Error on pair: {gold_annr}, {pred_annr}: {e}"
+            logger.error(m)
+
+        cm.name = f"{gold_annr} - {pred_annr}"
+
+        logger.success("Constructed cm: " + cm.name)
+        # cm.print_matrix()
+        yield cm
 
 
-def docs_by(annotator, docs):
-    for doc in docs:
-        yield doc.dnafs[annotator]
+def make_cm(
+    gold_docs: Iterable[DocumentSet],
+    pred_docs: Iterable[DocumentSet],
+    target_layer: Layer,
+    match_fn: Callable,
+):
+    """Given two collections of documents, one by annotator A and one by B, return a comfusion matrix.
+    It is constructed by matching either event or entity annotations (indicated by `target_layer`) using `match_fn`.
 
+    The task is to create two vectors, one corresponding to gold annotations and the other (pred vector) to the matches found to the gold annotations. The gold vector is all positive. The pred vector indicates for each gold annotation, whether a match has been found or not.
 
-def annotator_pairs():
-    pairs = list(itertools.combinations(ANNOTATORS, 2))
-    for a1, a2 in pairs:
-        yield a1, a2
-
-
-def make_cm(gold_docs, pred_docs, target_layer, match_fn):
-    """Given two collections of documents, one by annotator A and one by B, return an appropriately-named confusion matrix.
-
-    `target_layer` = e.g. `"events"`.
+    The straightforward method is to have one vector position for each gold annotation and record 0 or 1 for found or not found in the pred vector. However, we populate the gold vector with each *match* found to the gold anns, rather that each gold ann. This ensures that the vectors are not dependent on which direction the matching happens (annotator A to annotator B or B to A), since the number of annotations by A and B is not necessary equal, but the number of matchings found in either direction is.
     """
     # Collect annotations.
-
     def get_anns(dnafs, layer):
         for dnaf in dnafs:
             anns = dnaf["doc"]["annotations"][layer].values()
@@ -62,10 +76,9 @@ def make_cm(gold_docs, pred_docs, target_layer, match_fn):
     gold_anns = list(get_anns(gold_docs, target_layer))
     pred_anns = list(get_anns(pred_docs, target_layer))
 
-    # Build found/not-found vectors.
-
     gold_vector = []
     pred_vector = []
+
     # Keep a list of pred annotations that were matched to a gold annotation.
     # This is necessary for calculating false positives later.
     did_match = []
@@ -76,37 +89,13 @@ def make_cm(gold_docs, pred_docs, target_layer, match_fn):
             p for p in pred_anns if same_sentence(p, g) and match_fn(p, g)
         ]
         did_match.extend(matches)
+
         # If a match is found among the candidates, add 1 to the prediction vector also, else add 0.
         if len(matches) > 0:
-
-            # debug
-            logger.debug(
-                "\nOK\tFound matches: \n\tGOLD\t [{}]\n\tPREDS\t {}\n".format(
-                    g["string"],
-                    [match["string"] for match in matches],
-                )
-            )
-
-            ## CC 21/01/2020
-            # The task here is to create two vectors, one corresponding to gold annotations and the other (pred vector) to the matches found to the gold annotations.
-            # The gold vector is all positive. The pred vector indicates for each gold annotation, whether a match has been found or not.
-            # The most straightforward method is to have one vector position for each gold annotation and record 0 or 1 for found or not found in the pred vector.
-            # However, we go over each *matching* found to the gold anns, rather that each gold ann.
-            # This ensures that the vectors are not dependent on which direction the matching happens (annotator A to annotator B or B to A),
-            # since the number of annotations by A and B is not necessary equal, but the number of matchings found in either direction is.
             for _ in matches:
                 gold_vector.append(FOUND)
                 pred_vector.append(FOUND)  # true positives
         else:
-
-            # debug
-            logger.debug(
-                "\n:(\tNo match found: \n\tGOLD\t [{}]\n\tEVENTS IN DOC\n\t\t{}\n".format(
-                    g["string"],
-                    "\n\t\t".join([c["string"] for c in matches]),
-                )
-            )
-
             gold_vector.append(FOUND)
             pred_vector.append(NOT_FOUND)  # false negatives
 
@@ -117,7 +106,7 @@ def make_cm(gold_docs, pred_docs, target_layer, match_fn):
             gold_vector.append(NOT_FOUND)
             pred_vector.append(FOUND)  # false positives
 
-    cm = pycm.ConfusionMatrix(gold_vector, pred_vector)
+    cm = ConfusionMatrix(gold_vector, pred_vector)
 
     return cm
 
@@ -131,7 +120,7 @@ def same_sentence(ann1, ann2):
     return False
 
 
-def avg_cm_scores(cms):
+def avg_cm_scores(cms: Iterable[ConfusionMatrix]):
     """A `pycm.ConfusionMatrix` object holds two dicts: `cm.overall_stat` and `cm.class_stat`.
     This takes multiple CMs and returns the average of the overall stats.
     """
@@ -141,7 +130,7 @@ def avg_cm_scores(cms):
 
     ds = [cm.overall_stat for cm in cms]
     ds = [filter_out(d, can_be_averaged) for d in ds]
-    listed = merge(ds)
+    listed = merge_list(ds)
     averaged = map_over_leaves(listed, mean)
     return {"listed_scores": listed, "averaged_scores": averaged}
 
@@ -153,11 +142,10 @@ def write_report(cms, outpath):
         return cm.class_stat[stat][FOUND]
 
     def stat_message(cm):
-        stats = [
-            "{}\t{}".format(stat, get_stat(cm, stat))
-            for stat in ["F1", "PPV", "TPR"]
-        ]
-        return "\n".join([cm.name] + stats)
+        m = [cm.name]
+        for stat in ["F1", "PPV", "TPR"]:
+            m.append("{}\t{}".format(stat, get_stat(cm, stat)))
+        return "\n".join(m)
 
     with open(outpath, "w") as f:
         txt = (stat_message(cm) for cm in cms)

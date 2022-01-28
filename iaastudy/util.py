@@ -1,12 +1,12 @@
 import random
 import string
 from collections import defaultdict
-from typing import Callable
+from typing import Callable, Iterable
 from copy import deepcopy
 
 
-def recursive_delete(dirpath):
-    # deleted everything in a dir, recursively.
+def recursive_delete(dirpath) -> None:
+    """Recursively deletes the content in a dir."""
     for item in dirpath.iterdir():
         if item.is_dir():
             recursive_delete(item)
@@ -15,34 +15,27 @@ def recursive_delete(dirpath):
             item.unlink()
 
 
-def four_char_code():
-    candidates = string.ascii_lowercase + string.digits + string.digits
-    code = [random.choice(candidates) for _ in range(4)]
-    return "".join(code)
-
-
-def merge(ds):  # , condition=None, callback=None):
+def merge_list(ds: Iterable[dict]) -> dict:
     """Recursively aggregate dictionaries with the same keys.
-    If `condition` is given, don't aggregate values failing to meet it.
-    If `callback` is given, call this function on the aggregates values.
+
+    Given two dictionaries with the same structure
     """
-    r = {}
-    first_d = ds[0]
-    for k, v in first_d.items():
+    result = {}
+    first = ds[0]
+
+    # Check: all dictionaries should have the same keys.
+    for other in ds[1:]:
+        assert set(first.keys()) == set(other.keys())
+
+    for k, v in first.items():
         if isinstance(v, dict):
-            r[k] = merge([each[k] for each in ds])
+            result[k] = merge_list([each[k] for each in ds])
         else:
-            # if condition:
-            #     if not condition(v):
-            #         continue
-            r[k] = [each[k] for each in ds]
-            # if callback:
-            #     r[k] = callback(r[k])
-
-    return r
+            result[k] = [each[k] for each in ds]
+    return result
 
 
-def map_over_leaves(d: dict, c: Callable):
+def map_over_leaves(d: dict, c: Callable) -> dict:
     """Call `c` on each "leaf" of `d`, i.e. a value in `d` or a sub-dict of `d` that is not a dict itself.
     Return a new dict, leaving `d` intact.
     """
@@ -55,7 +48,7 @@ def map_over_leaves(d: dict, c: Callable):
     return r
 
 
-def filter_out(d: dict, condition: Callable):
+def filter_out(d: dict, condition: Callable) -> dict:
     """Return a copy of `d`, such that each leaf not passing `condition` is removed."""
     r = {}
     for k, v in d.items():
@@ -65,17 +58,6 @@ def filter_out(d: dict, condition: Callable):
             if condition(v):
                 r[k] = v
     return r
-
-
-def remove_punct(tokens):
-    """Return a new list of tokens such that punctuation is removed.
-    Specifically, discard any 'token' that is composed entirely of punctuation marks.
-    """
-    new_list = []
-    for token in tokens:
-        if not all((char in string.punctuation) for char in token):
-            new_list.append(token)
-    return new_list
 
 
 def check_span_overlap(ann1, ann2) -> str:
@@ -97,7 +79,7 @@ def check_span_overlap(ann1, ann2) -> str:
         return "partial"
 
 
-def dice_coef(items1, items2):
+def dice_coef(items1, items2) -> float:
     if len(items1) + len(items2) == 0:
         return 0
     intersect = set(items1).intersection(set(items2))

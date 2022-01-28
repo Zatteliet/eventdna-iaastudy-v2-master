@@ -1,48 +1,45 @@
 """Classes and functions to read Alpino parse trees and determine what the heads are in EventDNA annotations."""
 
 import xml.etree.ElementTree as ET
-from pathlib import Path
-from pprint import pprint
 
 
 class AlpinoTreeHandler:
-    """This class reads in an alpino .xml file and provides methods to find which tokens are heads."""
+    """Read in an do operations on an alpino .xml file.
+    Provides methods to find which tokens are heads.
+    """
 
     def __init__(self, alpino_file):
         self.tree = ET.parse(alpino_file)
-        self.node_to_parent_map = {c: p for p in self.tree.iter() for c in p}
+        self.nodes_to_parents = {c: p for p in self.tree.iter() for c in p}
 
     def get_parents(self, node):
-        """Return a list such that the first element is the queried node and the next are all its ancestor nodes, up to the root of the tree."""
-        parents = [node]
+        """Yield, in order, the queried node and then every ancestor up to and including the root."""
+        current = node
         while True:
-            last_node = parents[-1]
-            if last_node in self.node_to_parent_map:
-                parents.append(self.node_to_parent_map[last_node])
-            else:
+            yield current
+            current = self.nodes_to_parents.get(current)
+            if not current:
                 break
-        return parents
 
     def find_head_leaves(self):
         """Depth-search through the tree. Only leaves are returned."""
+
+        def check_stop(node):
+            """If a node gets a True check here, search stops at that node and doesn't travel deeper in the tree."""
+            # ! to allow all heads, comment out the following two conditions
+            # if node.get("cat") in ["ap", "advp", "pp"]:  # "pp", "advp"
+            #     return True
+            # if node.get("rel") == "mod":
+            #     return True
+            return False
 
         ## Negative restriction
         # Travel through all nodes in the tree in depth-first fashion, starting at the root.
         # Eliminate all those nodes that don't conform to the requirements.
 
-        # We will add nodes to `to_visit` as we travel in the tree.
         to_visit = [self.tree.getroot()]
         found = []
         while True:
-
-            ## debug
-            # node_repr = (
-            #     lambda node: node.get("rel")
-            #     if not node.get("word")
-            #     else node.get("word")
-            # )
-            # print([node_repr(n) for n in to_visit], [node_repr(n) for n in found])
-
             # If all nodes in the tree have been travelled, stop the loop.
             if len(to_visit) == 0:
                 break
@@ -51,20 +48,9 @@ class AlpinoTreeHandler:
             current_node = to_visit.pop(0)
 
             # Determine whether the search for heads must stop here or continue.
-            def check_stop(node):
-                """If a node gets a True check here, search stops at that node and doesn't travel deeper in the tree."""
-                # ! to allow all heads, comment out the following two conditions
-                # if node.get("cat") in ["ap", "advp", "pp"]:  # "pp", "advp"
-                #     return True
-                # if node.get("rel") == "mod":
-                #     return True
-                return False
-
             if check_stop(current_node):
-                continue  # NB: continue means skip to the next iteration of the "while true" loop.
+                continue
 
-            # If the current node passes the check_stop test and is a leaf, add it to the `found` list.
-            # Else, take the children of the current node and add them to the to_visit list.
             is_leaf = lambda node: len(list(node)) == 0
             if is_leaf(current_node):
                 found.append(current_node)
@@ -98,25 +84,24 @@ class AlpinoTreeHandler:
             return len(list(node)) == 0
 
         # Get leaf nodes that are heads, as nodes.
-        leaf_hd_nodes = self.find_head_leaves()
+        leaf_heads = self.find_head_leaves()
 
         # Get nodes that are tokens. These are always leaves.
-        sentence_token_nodes = [
+        sentence_tokens = [
             node
             for node in self.tree.iter("node")
             if is_leaf(node) and node.get("word") is not None
         ]
-        sentence_token_nodes = sorted(
-            sentence_token_nodes,
-            key=lambda node: int(
-                node.get("begin")
-            ),  # don't forget to int() --> else the numbers are strings
+        sentence_tokens = sorted(
+            sentence_tokens, key=lambda node: int(node.get("begin"))
         )
+
         # Sanity check: the sentence found by ordering the nodes is equal to the sentence given as a Sentence element in the xml.
         # For unknown reasons a None node is added to the list. This naively removes it (CC 13/05/2019).
         tokens_from_sentence_nodes = [
-            node.get("word") for node in sentence_token_nodes
+            node.get("word") for node in sentence_tokens
         ]
+
         x_tokens_by_sentence = self.tree.findall("./sentence")[0].text.split()
         assert (
             tokens_from_sentence_nodes == x_tokens_by_sentence
@@ -124,8 +109,7 @@ class AlpinoTreeHandler:
 
         # Collect information: go over token nodes and show 1 if the token is part of the list of head tokens and 0 otherwise.
         head_flags = [
-            (1 if node in leaf_hd_nodes else 0)
-            for node in sentence_token_nodes
+            (1 if node in leaf_heads else 0) for node in sentence_tokens
         ]
         assert len(tokens_from_sentence_nodes) == len(
             head_flags
