@@ -7,5 +7,5 @@ This repo describes the IAA study performed on EventDNA data in late 2019/early 
 Example run:
 
 ```bash
-python main.py data/iaa_set_dnaf.zip /mnt/c/Users/camie/Downloads/IAA_OUT/ fallback
+python main.py data/iaa_set_dnaf.zip /mnt/c/Users/camie/Downloads/IAA_OUT/ fallback --restricted
 ```

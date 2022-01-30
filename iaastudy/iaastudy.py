@@ -5,12 +5,20 @@ from zipfile import ZipFile
 from loguru import logger
 
 from iaastudy.alpino_heads import add_heads
-from iaastudy.cm import avg_cm_scores, collect_cms, write_report
+from iaastudy.event_cms import avg_cm_scores, collect_cms, write_report
 from iaastudy.defs import ANNOTATORS, DocumentSet, Layer
 from iaastudy.util import recursive_delete
+from iaastudy.iptc_cms import collect_scores_over_pairs
+from statistics import mean
 
 
-def run_iaa_study(data_zip: Path, out_dir: Path, match_fn) -> None:
+def run_iaa_study(
+    data_zip: Path,
+    out_dir: Path,
+    match_fn,
+    restricted_mode: bool,
+    most_specific: bool,
+) -> None:
     prepare(out_dir)
 
     # Read in the annotated data.
@@ -22,9 +30,17 @@ def run_iaa_study(data_zip: Path, out_dir: Path, match_fn) -> None:
     # Augment events in the data with their head sets.
     for doc_set in doc_sets:
         for dnaf in doc_set.dnafs.values():
-            add_heads(dnaf, doc_set.alpino)
+            add_heads(dnaf, doc_set.alpino, restricted_mode)
 
-    # Get confusion matrices and scores.
+    eval_event_spans(doc_sets, match_fn, out_dir)
+    eval_iptc_codes(doc_sets, out_dir, most_specific)
+
+    logger.success(f"All done. Wrote to {out_dir}")
+
+
+def eval_event_spans(doc_sets, match_fn, out_dir):
+
+    # Get confusion matrices and scores to do event span IAA.
     cms = list(
         collect_cms(doc_sets=doc_sets, layer=Layer.EVENTS, match_fn=match_fn)
     )
@@ -42,7 +58,19 @@ def run_iaa_study(data_zip: Path, out_dir: Path, match_fn) -> None:
     # Write a more straightforward score report.
     write_report(cms, out_dir / "f1_prec_rec.txt")
 
-    logger.success(f"All done. Wrote to {out_dir}")
+
+def eval_iptc_codes(doc_sets, out_dir, most_specific: bool):
+    m = []
+    scores = []
+    for gold_annr, pred_annr, score in collect_scores_over_pairs(
+        doc_sets, most_specific
+    ):
+        scores.append(score)
+        m.append(f"{gold_annr} - {pred_annr}: {score}")
+        m = sorted(m)
+    m.append(f"Mean over all pairs: {mean(scores)}")
+    with open(out_dir / "iptc_iaa.txt", "w") as f:
+        f.write("\n".join(m))
 
 
 def prepare(out_dir: Path) -> None:

@@ -24,10 +24,12 @@ def collect_cms(
 
     layer = layer.value
 
+    # TODO factor out
     def docs_by(annotator, docs):
         for doc in docs:
             yield doc.dnafs[annotator]
 
+    # TODO factor out this fn, not useful
     def annotator_pairs():
         pairs = list(itertools.combinations(ANNOTATORS, 2))
         for a1, a2 in pairs:
@@ -58,7 +60,7 @@ def make_cm(
     target_layer: Layer,
     match_fn: Callable,
 ):
-    """Given two collections of documents, one by annotator A and one by B, return a comfusion matrix.
+    """Given two collections of documents, one by annotator A and one by B, return a confusion matrix.
     It is constructed by matching either event or entity annotations (indicated by `target_layer`) using `match_fn`.
 
     The task is to create two vectors, one corresponding to gold annotations and the other (pred vector) to the matches found to the gold annotations. The gold vector is all positive. The pred vector indicates for each gold annotation, whether a match has been found or not.

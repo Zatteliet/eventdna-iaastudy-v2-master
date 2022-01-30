@@ -21,16 +21,16 @@ class AlpinoTreeHandler:
             if not current:
                 break
 
-    def find_head_leaves(self):
+    def find_head_leaves(self, restricted_mode: bool):
         """Depth-search through the tree. Only leaves are returned."""
 
-        def check_stop(node):
+        def check_stop(node, restricted_mode: bool):
             """If a node gets a True check here, search stops at that node and doesn't travel deeper in the tree."""
-            # ! to allow all heads, comment out the following two conditions
-            # if node.get("cat") in ["ap", "advp", "pp"]:  # "pp", "advp"
-            #     return True
-            # if node.get("rel") == "mod":
-            #     return True
+            if restricted_mode:
+                if node.get("cat") in ["ap", "advp", "pp"]:  # "pp", "advp"
+                    return True
+                if node.get("rel") == "mod":
+                    return True
             return False
 
         ## Negative restriction
@@ -48,7 +48,7 @@ class AlpinoTreeHandler:
             current_node = to_visit.pop(0)
 
             # Determine whether the search for heads must stop here or continue.
-            if check_stop(current_node):
+            if check_stop(current_node, restricted_mode):
                 continue
 
             is_leaf = lambda node: len(list(node)) == 0
@@ -74,7 +74,7 @@ class AlpinoTreeHandler:
 
         return found
 
-    def head_vector(self):
+    def head_vector(self, restricted_mode):
         """Given an alpino tree, give a binary vector mapping over the tokens of the sentence described by the tree,
         such that 1 indicates that a token is part of a head node.
         e.g. [0, 1, 0, 1, 0, 0] --> tokens at index 1 and 3 are part of head nodes over the sentence.
@@ -84,7 +84,7 @@ class AlpinoTreeHandler:
             return len(list(node)) == 0
 
         # Get leaf nodes that are heads, as nodes.
-        leaf_heads = self.find_head_leaves()
+        leaf_heads = self.find_head_leaves(restricted_mode)
 
         # Get nodes that are tokens. These are always leaves.
         sentence_tokens = [
@@ -118,12 +118,12 @@ class AlpinoTreeHandler:
         return head_flags
 
 
-def add_heads(dnaf, alpino_dir) -> None:
+def add_heads(dnaf, alpino_dir, restricted_mode) -> None:
     """Add head set info to the event annotations found in the given DNAF."""
 
     # Get a dict of sentence numbers to the correct head vector.
     head_vector_map = {
-        int(file.stem): AlpinoTreeHandler(file).head_vector()
+        int(file.stem): AlpinoTreeHandler(file).head_vector(restricted_mode)
         for file in alpino_dir.iterdir()
     }
 
