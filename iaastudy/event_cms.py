@@ -1,4 +1,5 @@
 import itertools
+from pathlib import Path
 from statistics import mean
 from typing import Callable, Iterable
 
@@ -24,12 +25,10 @@ def collect_cms(
 
     layer = layer.value
 
-    # TODO factor out
     def docs_by(annotator, docs):
         for doc in docs:
             yield doc.dnafs[annotator]
 
-    # TODO factor out this fn, not useful
     def annotator_pairs():
         pairs = list(itertools.combinations(ANNOTATORS, 2))
         for a1, a2 in pairs:
@@ -50,7 +49,6 @@ def collect_cms(
         cm.name = f"{gold_annr} - {pred_annr}"
 
         logger.success("Constructed cm: " + cm.name)
-        # cm.print_matrix()
         yield cm
 
 
@@ -61,9 +59,8 @@ def make_cm(
     match_fn: Callable,
 ):
     """Given two collections of documents, one by annotator A and one by B, return a confusion matrix.
-    It is constructed by matching either event or entity annotations (indicated by `target_layer`) using `match_fn`.
 
-    The task is to create two vectors, one corresponding to gold annotations and the other (pred vector) to the matches found to the gold annotations. The gold vector is all positive. The pred vector indicates for each gold annotation, whether a match has been found or not.
+    It is constructed by matching either event or entity annotations (indicated by `target_layer`) using `match_fn`.
 
     The straightforward method is to have one vector position for each gold annotation and record 0 or 1 for found or not found in the pred vector. However, we populate the gold vector with each *match* found from pred ann to the gold anns, rather that each gold ann. This ensures that the vectors are not dependent on which direction the matching happens (annotator A to annotator B or B to A), since the number of annotations by A and B is not necessary equal, but the number of matchings found in either direction is.
     """
@@ -123,8 +120,9 @@ def same_sentence(ann1, ann2):
 
 
 def avg_cm_scores(cms: Iterable[ConfusionMatrix]):
-    """A `pycm.ConfusionMatrix` object holds two dicts: `cm.overall_stat` and `cm.class_stat`.
-    This takes multiple CMs and returns the average of the overall stats.
+    """A `pycm.ConfusionMatrix` object holds an `cm.overall_stat` dict.
+
+    This takes multiple CMs and returns one dict where the overall stat scores are collected in lists, and another where these scores are averaged.
     """
 
     def can_be_averaged(v):
@@ -137,8 +135,11 @@ def avg_cm_scores(cms: Iterable[ConfusionMatrix]):
     return {"listed_scores": listed, "averaged_scores": averaged}
 
 
-def write_report(cms, outpath):
-    """Write F1, PREC, REC scores of each cm to outpath."""
+def write_report(cms: Iterable[ConfusionMatrix], outpath: Path):
+    """Write F1, precision and recall scores of each cm (looking at the positive (FOUND) class) to outpath.
+
+    PPV corresponds to precision, and TPR to recall.
+    """
 
     def get_stat(cm, stat):
         return cm.class_stat[stat][FOUND]

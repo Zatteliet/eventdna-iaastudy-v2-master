@@ -7,7 +7,7 @@ from loguru import logger
 from iaastudy.alpino_heads import add_heads
 from iaastudy.event_cms import avg_cm_scores, collect_cms, write_report
 from iaastudy.defs import ANNOTATORS, DocumentSet, Layer
-from iaastudy.util import recursive_delete
+from iaastudy.util import delete_contents
 from iaastudy.iptc_cms import collect_scores_over_pairs
 from statistics import mean
 
@@ -19,12 +19,14 @@ def run_iaa_study(
     restricted_mode: bool,
     most_specific: bool,
 ) -> None:
-    prepare(out_dir)
 
     # Read in the annotated data.
-    unzipped_dir = data_zip.with_suffix("")
-    check_extract(data_zip, unzipped_dir)
-    doc_sets = list(get_doc_set(d) for d in unzipped_dir.iterdir())
+    prepare(out_dir)
+    data_dir = data_zip.with_suffix("")
+    check_extract(data_zip, data_dir)
+    doc_sets: list[DocumentSet] = list(
+        get_doc_set(d) for d in data_dir.iterdir()
+    )
     logger.info(f"Read in {len(doc_sets)} sets of 4 annotated docs each.")
 
     # Augment events in the data with their head sets.
@@ -33,13 +35,14 @@ def run_iaa_study(
             add_heads(dnaf, doc_set.alpino, restricted_mode)
 
     eval_event_spans(doc_sets, match_fn, out_dir)
-    eval_iptc_codes_macro(doc_sets, out_dir, most_specific)
-    eval_iptc_codes_micro(doc_sets, out_dir, most_specific)
+    eval_iptc_codes_macro_acc(doc_sets, out_dir, most_specific)
+    eval_iptc_codes_micro_prf(doc_sets, out_dir, most_specific)
 
     logger.success(f"All done. Wrote to {out_dir}")
 
 
 def eval_event_spans(doc_sets, match_fn, out_dir):
+    """Evaluate the event span annotations over all `doc_set`s."""
 
     # Get confusion matrices and scores to do event span IAA.
     cms = list(
@@ -60,7 +63,7 @@ def eval_event_spans(doc_sets, match_fn, out_dir):
     write_report(cms, out_dir / "f1_prec_rec.txt")
 
 
-def eval_iptc_codes_macro(doc_sets, out_dir, most_specific: bool):
+def eval_iptc_codes_macro_acc(doc_sets, out_dir, most_specific: bool):
     m = []
     scores = []
     for gold_annr, pred_annr, score in collect_scores_over_pairs(
@@ -70,11 +73,11 @@ def eval_iptc_codes_macro(doc_sets, out_dir, most_specific: bool):
         m.append(f"{gold_annr} - {pred_annr}: {score}")
         m = sorted(m)
     m.append(f"Mean over all pairs: {mean(scores)}")
-    with open(out_dir / "iptc_iaa_macro.txt", "w") as f:
+    with open(out_dir / "iptc_iaa_macro_acc.txt", "w") as f:
         f.write("\n".join(m))
 
 
-def eval_iptc_codes_micro(doc_sets, out_dir, most_specific: bool):
+def eval_iptc_codes_micro_prf(doc_sets, out_dir, most_specific: bool):
     m = []
     scores = []
     for gold_annr, pred_annr, score in collect_scores_over_pairs(
@@ -84,14 +87,15 @@ def eval_iptc_codes_micro(doc_sets, out_dir, most_specific: bool):
         m.append(f"{gold_annr} - {pred_annr}: {score}")
         m = sorted(m)
     # m.append(f"Mean over all pairs: {mean(scores)}")
-    with open(out_dir / "iptc_iaa_micro.txt", "w") as f:
+    with open(out_dir / "iptc_iaa_micro_prf.txt", "w") as f:
         f.write("\n".join(m))
 
 
 def prepare(out_dir: Path) -> None:
+    """Create `out_dir`. It it already exists, delete its contents."""
     if out_dir.exists():
         logger.warning("Out dir already exists. Cleaning it...")
-        recursive_delete(out_dir)
+        delete_contents(out_dir)
     out_dir.mkdir(exist_ok=True)
 
 

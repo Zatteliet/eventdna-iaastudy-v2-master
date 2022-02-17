@@ -18,5 +18,10 @@ class Layer(Enum):
 
 @dataclass
 class DocumentSet:
+    """Represents a single document annotated by 4 different annotators.
+
+    `dnafs` is a dict of the form {annotator_id: dnaf_jsonlike}
+    """
+
     dnafs: dict
     alpino: Path

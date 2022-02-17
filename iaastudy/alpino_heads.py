@@ -4,7 +4,7 @@ import xml.etree.ElementTree as ET
 
 
 class AlpinoTreeHandler:
-    """Read in an do operations on an alpino .xml file.
+    """Read in and do operations on an alpino .xml file.
     Provides methods to find which tokens are heads.
     """
 
@@ -75,8 +75,7 @@ class AlpinoTreeHandler:
         return found
 
     def head_vector(self, restricted_mode):
-        """Given an alpino tree, give a binary vector mapping over the tokens of the sentence described by the tree,
-        such that 1 indicates that a token is part of a head node.
+        """Given an alpino tree, give a binary vector mapping over the tokens of the sentence described by the tree, such that 1 indicates that a token is part of a head node.
         e.g. [0, 1, 0, 1, 0, 0] --> tokens at index 1 and 3 are part of head nodes over the sentence.
         """
 
@@ -111,18 +110,19 @@ class AlpinoTreeHandler:
         head_flags = [
             (1 if node in leaf_heads else 0) for node in sentence_tokens
         ]
-        assert len(tokens_from_sentence_nodes) == len(
-            head_flags
-        )  # Sanity check.
+        assert len(tokens_from_sentence_nodes) == len(head_flags)
 
         return head_flags
 
 
 def add_heads(dnaf, alpino_dir, restricted_mode) -> None:
-    """Add head set info to the event annotations found in the given DNAF."""
+    """Add head set info to the event annotations found in the given DNAF.
+    
+    This information is represented as a set of token indices.
+    """
 
     # Get a dict of sentence numbers to the correct head vector.
-    head_vector_map = {
+    sent_to_head_vector = {
         int(file.stem): AlpinoTreeHandler(file).head_vector(restricted_mode)
         for file in alpino_dir.iterdir()
     }
@@ -134,9 +134,10 @@ def add_heads(dnaf, alpino_dir, restricted_mode) -> None:
 
         # Build vector for this event annotation over the sentence.
         # EG. "[President Trump addressed Congress] ." --> [1, 1, 1, 1, 0]
+        # Tokens are represented as indices.
         sentence_tokens = sorted(
             dnaf["doc"]["sentences"][home_sentence_id]["token_ids"]
-        )  # Tokens are represented as indices.
+        )
         event_tokens = sorted(event["features"]["span"])
         event_over_sentence_vector = [
             (1 if st in event_tokens else 0) for st in sentence_tokens
@@ -147,13 +148,13 @@ def add_heads(dnaf, alpino_dir, restricted_mode) -> None:
         sentence_number = int(
             home_sentence_id.split("_")[1]
         )  # from e.g. "sentence_2" to 2
-        head_over_sentence_vector = head_vector_map[sentence_number]
+        head_vector = sent_to_head_vector[sentence_number]
 
         # Get the overlap between head vector and sentence vector to get a set of tokens that are heads in an annotation.
         head_set = {
             i
             for i, (val1, val2) in enumerate(
-                zip(event_over_sentence_vector, head_over_sentence_vector)
+                zip(event_over_sentence_vector, head_vector)
             )
             if val1 == val2 == 1
         }  # the `== 1` is there so as not to count the 0 values also.

@@ -1,15 +1,12 @@
-import random
-import string
-from collections import defaultdict
 from typing import Callable, Iterable
 from copy import deepcopy
 
 
-def recursive_delete(dirpath) -> None:
+def delete_contents(dirpath) -> None:
     """Recursively deletes the content in a dir."""
     for item in dirpath.iterdir():
         if item.is_dir():
-            recursive_delete(item)
+            delete_contents(item)
             item.rmdir()
         else:
             item.unlink()
@@ -80,6 +77,9 @@ def check_span_overlap(ann1, ann2) -> str:
 
 
 def dice_coef(items1, items2) -> float:
+    """Calculate the Sørensen-Dice coefficient over two sets.
+    It follows the original version: https://en.wikipedia.org/wiki/S%C3%B8rensen%E2%80%93Dice_coefficient
+    """
     if len(items1) + len(items2) == 0:
         return 0
     intersect = set(items1).intersection(set(items2))

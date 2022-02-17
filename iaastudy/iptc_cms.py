@@ -6,7 +6,6 @@ from pycm import ConfusionMatrix
 
 from iaastudy.defs import ANNOTATORS, DocumentSet
 from sklearn.preprocessing import MultiLabelBinarizer
-from sklearn.metrics import cohen_kappa_score
 
 
 def get_iptc_codes(dnaf, most_specific: bool):
@@ -44,64 +43,18 @@ def get_iptc_codes(dnaf, most_specific: bool):
     return set(topics)
 
 
-# def get_krippendorf_alpha(gold_codes, pred_codes):
-#     g, p = MLB.fit_transform([gold_codes, pred_codes])
-#     cm = ConfusionMatrix(g, p)
-#     return cm.overall_stat["Krippendorff Alpha"]
-
-
-# def get_cohens_kappa(gold_codes, pred_codes):
-#     """Note that Cohen's Kappa is symmetric."""
-#     g, p = MLB.fit_transform([gold_codes, pred_codes])
-#     print(g, p)
-#     return cohen_kappa_score(g, p)
-
-
 def get_accuracy(gold_codes, pred_codes):
+    """Return the accuracy score comparing `gold_codes` to `pred_codes`."""
     mlb = MultiLabelBinarizer()
     g, p = mlb.fit_transform([gold_codes, pred_codes])
     cm = ConfusionMatrix(g, p)
-    # print(cm.ACC, g, p)
     if not 1 in cm.ACC:
         return cm.ACC["1"]
     return cm.ACC[1]
 
-    # assert 1 in cm.ACC or "1" in cm.ACC
 
-    # # assert cm.ACC.get(1), cm.ACC
-    # try:
-    #     return cm.ACC["1"]
-    # except KeyError as e:
-    #     print(cm.ACC)
-    #     raise e
-    # # return cm.Overall_ACC
-
-
-def f1_score(prec, rec):
-    return (2 * (prec * rec)) / (prec + rec)
-
-
-# def get_prf1(gold_codes, pred_codes):
-#     """Get precision, recall and F1 score for the positive class."""
-#     g, p = MLB.fit_transform([gold_codes, pred_codes])
-#     # print(g, p)
-#     cm = ConfusionMatrix(g, p)
-#     # print(cm.precision[1], g, p)
-
-#     label = 1 if 1 in cm.ACC else "1"
-
-#     # if not 1 in cm.ACC:
-#     #     return cm.ACC["1"]
-
-#     # rec = cm.TPR[label]
-#     # prec = cm.PPV[label]
-#     # f1 = f1_score(prec, rec)
-
-#     return cm.ACC[label]
-
-
-def micro_avg_score(gold_dnafs, pred_dnafs, most_specific: bool):
-    """Yield gold and pred vectors over the documents."""
+def micro_avg_prf_score(gold_dnafs, pred_dnafs, most_specific: bool) -> dict:
+    """Return micro-average PRF scores comparing gold and pred `dnaf` documents."""
     mlb = MultiLabelBinarizer()
     flat_gold_vector = []
     flat_pred_vector = []
@@ -113,8 +66,6 @@ def micro_avg_score(gold_dnafs, pred_dnafs, most_specific: bool):
 
         gold_vector, pred_vector = mlb.fit_transform([gold_codes, pred_codes])
 
-        print(gold_codes, pred_codes, gold_vector, pred_vector)
-
         flat_gold_vector.extend(gold_vector)
         flat_pred_vector.extend(pred_vector)
 
@@ -123,7 +74,8 @@ def micro_avg_score(gold_dnafs, pred_dnafs, most_specific: bool):
     return scores
 
 
-def macro_avg_score(gold_dnafs, pred_dnafs, most_specific: bool):
+def macro_avg_acc_score(gold_dnafs, pred_dnafs, most_specific: bool) -> float:
+    """Return macro-averaged accuracy scores comparing gold and pred `dnaf` documents."""
     scores = []
     for gold_dnaf, pred_dnaf in zip(gold_dnafs, pred_dnafs):
         g = get_iptc_codes(gold_dnaf, most_specific)
@@ -131,24 +83,31 @@ def macro_avg_score(gold_dnafs, pred_dnafs, most_specific: bool):
         scores.append(get_accuracy(g, p))
         scores.append(get_accuracy(g, p))
     return mean(scores)
-    # return mean(recs), mean(precs), mean(f1s)
 
 
 def collect_scores_over_pairs(
     doc_sets: Iterable[DocumentSet], most_specific: bool, macro: bool
 ):
+    """Yield scores for each annotator pairs attested in `doc_sets`.
+
+    Args:
+        doc_sets (Iterable[DocumentSet]): document set containing 4 annotated `dnaf` documents.
+        most_specific (bool): if True, the most specific IPTC codes will be compared. If False, the most general ones.
+        macro (bool): return macro-averaged ACC scores or micro-averaged PRF scores.
+    """
+
     for gold_annr, pred_annr in combinations(ANNOTATORS, 2):
         gold_dnafs = (doc_set.dnafs[gold_annr] for doc_set in doc_sets)
         pred_dnafs = (doc_set.dnafs[pred_annr] for doc_set in doc_sets)
 
         if macro:
-            scores = macro_avg_score(
+            scores = macro_avg_acc_score(
                 gold_dnafs,
                 pred_dnafs,
                 most_specific=most_specific,
             )
         else:
-            scores = micro_avg_score(
+            scores = micro_avg_prf_score(
                 gold_dnafs, pred_dnafs, most_specific=most_specific
             )
 
