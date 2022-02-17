@@ -81,23 +81,23 @@ def f1_score(prec, rec):
     return (2 * (prec * rec)) / (prec + rec)
 
 
-def get_prf1(gold_codes, pred_codes):
-    """Get precision, recall and F1 score for the positive class."""
-    g, p = MLB.fit_transform([gold_codes, pred_codes])
-    # print(g, p)
-    cm = ConfusionMatrix(g, p)
-    # print(cm.precision[1], g, p)
+# def get_prf1(gold_codes, pred_codes):
+#     """Get precision, recall and F1 score for the positive class."""
+#     g, p = MLB.fit_transform([gold_codes, pred_codes])
+#     # print(g, p)
+#     cm = ConfusionMatrix(g, p)
+#     # print(cm.precision[1], g, p)
 
-    label = 1 if 1 in cm.ACC else "1"
+#     label = 1 if 1 in cm.ACC else "1"
 
-    # if not 1 in cm.ACC:
-    #     return cm.ACC["1"]
+#     # if not 1 in cm.ACC:
+#     #     return cm.ACC["1"]
 
-    # rec = cm.TPR[label]
-    # prec = cm.PPV[label]
-    # f1 = f1_score(prec, rec)
+#     # rec = cm.TPR[label]
+#     # prec = cm.PPV[label]
+#     # f1 = f1_score(prec, rec)
 
-    return cm.ACC[label]
+#     return cm.ACC[label]
 
 
 def micro_avg_score(gold_dnafs, pred_dnafs, most_specific: bool):

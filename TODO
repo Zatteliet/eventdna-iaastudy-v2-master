@@ -1,0 +1,14 @@
+
+Todo:
+  ✔ Do restricted and unrestricted run at same time -- remove option from main @done(22-02-17 10:40)
+  ☐ Do IPTC run separately
+  ☐ Write Readme correctly
+  Document all .py files:
+    ☐ alpino_head.py
+    ☐ def.py
+    ☐ event_cms.py
+    ☐ iaastudy.py
+    ☐ iptc_cms.py
+    ☐ match_fns.py
+    ☐ util.py
+
