@@ -65,7 +65,7 @@ def make_cm(
 
     The task is to create two vectors, one corresponding to gold annotations and the other (pred vector) to the matches found to the gold annotations. The gold vector is all positive. The pred vector indicates for each gold annotation, whether a match has been found or not.
 
-    The straightforward method is to have one vector position for each gold annotation and record 0 or 1 for found or not found in the pred vector. However, we populate the gold vector with each *match* found to the gold anns, rather that each gold ann. This ensures that the vectors are not dependent on which direction the matching happens (annotator A to annotator B or B to A), since the number of annotations by A and B is not necessary equal, but the number of matchings found in either direction is.
+    The straightforward method is to have one vector position for each gold annotation and record 0 or 1 for found or not found in the pred vector. However, we populate the gold vector with each *match* found from pred ann to the gold anns, rather that each gold ann. This ensures that the vectors are not dependent on which direction the matching happens (annotator A to annotator B or B to A), since the number of annotations by A and B is not necessary equal, but the number of matchings found in either direction is.
     """
     # Collect annotations.
     def get_anns(dnafs, layer):

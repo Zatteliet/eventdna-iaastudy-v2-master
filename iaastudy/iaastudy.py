@@ -33,7 +33,8 @@ def run_iaa_study(
             add_heads(dnaf, doc_set.alpino, restricted_mode)
 
     eval_event_spans(doc_sets, match_fn, out_dir)
-    eval_iptc_codes(doc_sets, out_dir, most_specific)
+    eval_iptc_codes_macro(doc_sets, out_dir, most_specific)
+    eval_iptc_codes_micro(doc_sets, out_dir, most_specific)
 
     logger.success(f"All done. Wrote to {out_dir}")
 
@@ -59,17 +60,31 @@ def eval_event_spans(doc_sets, match_fn, out_dir):
     write_report(cms, out_dir / "f1_prec_rec.txt")
 
 
-def eval_iptc_codes(doc_sets, out_dir, most_specific: bool):
+def eval_iptc_codes_macro(doc_sets, out_dir, most_specific: bool):
     m = []
     scores = []
     for gold_annr, pred_annr, score in collect_scores_over_pairs(
-        doc_sets, most_specific
+        doc_sets, most_specific, macro=True
     ):
         scores.append(score)
         m.append(f"{gold_annr} - {pred_annr}: {score}")
         m = sorted(m)
     m.append(f"Mean over all pairs: {mean(scores)}")
-    with open(out_dir / "iptc_iaa.txt", "w") as f:
+    with open(out_dir / "iptc_iaa_macro.txt", "w") as f:
+        f.write("\n".join(m))
+
+
+def eval_iptc_codes_micro(doc_sets, out_dir, most_specific: bool):
+    m = []
+    scores = []
+    for gold_annr, pred_annr, score in collect_scores_over_pairs(
+        doc_sets, most_specific, macro=False
+    ):
+        scores.append(score)
+        m.append(f"{gold_annr} - {pred_annr}: {score}")
+        m = sorted(m)
+    # m.append(f"Mean over all pairs: {mean(scores)}")
+    with open(out_dir / "iptc_iaa_micro.txt", "w") as f:
         f.write("\n".join(m))
 
 
