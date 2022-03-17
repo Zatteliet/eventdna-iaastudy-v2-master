@@ -3,7 +3,7 @@ from iaastudy.util import dice_coef, check_span_overlap
 DICE_THRESHOLD = 0.8
 
 
-def fallback_match(ann1, ann2) -> bool:
+def fallback_match(ann1: dict, ann2: dict) -> bool:
     """Return True if the given annotations match."""
     overlap = check_span_overlap(ann1, ann2)
     if overlap == "perfect":

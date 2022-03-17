@@ -1,14 +1,14 @@
 
 Todo:
   ✔ Do restricted and unrestricted run at same time -- remove option from main @done(22-02-17 10:40)
-  ☐ Write Readme correctly
+  ✔ Write Readme correctly @done(22-03-17 16:11)
   ☐ Write reqs
   Document all .py files:
     ✔ alpino_heads.py @done(22-03-17 15:49)
     ✔ defs.py @done(22-03-17 15:50)
     ✔ event_cms.py @done(22-03-17 15:51)
     ✔ iaastudy.py @done(22-03-17 15:56)
-    ☐ iptc_cms.py
-    ☐ match_fns.py
-    ☐ util.py
+    ✔ iptc_cms.py @done(22-03-17 16:01)
+    ✔ match_fns.py @done(22-03-17 16:03)
+    ✔ util.py @done(22-03-17 16:04)
 

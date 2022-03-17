@@ -1,8 +1,9 @@
-from typing import Callable, Iterable
 from copy import deepcopy
+from pathlib import Path
+from typing import Callable, Iterable
 
 
-def delete_contents(dirpath) -> None:
+def delete_contents(dirpath: Path) -> None:
     """Recursively deletes the content in a dir."""
     for item in dirpath.iterdir():
         if item.is_dir():

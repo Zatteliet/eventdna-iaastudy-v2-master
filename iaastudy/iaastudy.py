@@ -22,6 +22,8 @@ def run_iaa_study(
 ) -> None:
     """Perform the IAA study and write out results.
 
+    Note that the given `data_zip` will be extracted to the same dir the zip lives in.
+
     Args:
         data_zip (Path): Zip files containing the annotations of all 4 annotators as well as the Alpino files.
         out_dir (Path): Results of the study will be written to this dir.
