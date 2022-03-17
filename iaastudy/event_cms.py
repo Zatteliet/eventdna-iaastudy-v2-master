@@ -17,7 +17,7 @@ NOT_FOUND = "Not found"
 def collect_cms(
     doc_sets: Iterable[DocumentSet], layer: Layer, match_fn: Callable
 ) -> Iterable[ConfusionMatrix]:
-    """Yield confusion matrices built for each pair of annotators attested in `docs`.
+    """Yield confusion matrices built for each pair of annotators attested in `doc_sets`.
     The CM inputs are built by comparing the events found by annotators in the pairs, using `match_fn` to compare event spans.
 
     `layer` determines whether comparisons will be made over events or entities.

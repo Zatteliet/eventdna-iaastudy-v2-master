@@ -1,5 +1,6 @@
 import json
 from pathlib import Path
+from typing import Callable, Iterable
 from zipfile import ZipFile
 
 from loguru import logger
@@ -15,12 +16,21 @@ from statistics import mean
 def run_iaa_study(
     data_zip: Path,
     out_dir: Path,
-    match_fn,
+    match_fn: Callable,
     restricted_mode: bool,
     most_specific: bool,
 ) -> None:
+    """Perform the IAA study and write out results.
 
-    # Read in the annotated data.
+    Args:
+        data_zip (Path): Zip files containing the annotations of all 4 annotators as well as the Alpino files.
+        out_dir (Path): Results of the study will be written to this dir.
+        match_fn (Callable): Function that will be used to match annotations against each other.
+        restricted_mode (bool): If True, heads belonging to modifiers will not be considered during head matching.
+        most_specific (bool): If True, the most specific annotated IPTC codes will be used for IPTC match evaluation. If False, the codes will be generalized to their top-level equivalents.
+    """
+
+    # Extract and read in the annotated data.
     prepare(out_dir)
     data_dir = data_zip.with_suffix("")
     check_extract(data_zip, data_dir)
@@ -34,6 +44,7 @@ def run_iaa_study(
         for dnaf in doc_set.dnafs.values():
             add_heads(dnaf, doc_set.alpino, restricted_mode)
 
+    # Perform evaluations.
     eval_event_spans(doc_sets, match_fn, out_dir)
     eval_iptc_codes_macro_acc(doc_sets, out_dir, most_specific)
     eval_iptc_codes_micro_prf(doc_sets, out_dir, most_specific)
@@ -41,8 +52,10 @@ def run_iaa_study(
     logger.success(f"All done. Wrote to {out_dir}")
 
 
-def eval_event_spans(doc_sets, match_fn, out_dir):
-    """Evaluate the event span annotations over all `doc_set`s."""
+def eval_event_spans(
+    doc_sets: Iterable[DocumentSet], match_fn: Callable, out_dir: Path
+):
+    """Evaluate the event span annotations over all `doc_set`s and write out a report."""
 
     # Get confusion matrices and scores to do event span IAA.
     cms = list(
@@ -63,7 +76,13 @@ def eval_event_spans(doc_sets, match_fn, out_dir):
     write_report(cms, out_dir / "f1_prec_rec.txt")
 
 
-def eval_iptc_codes_macro_acc(doc_sets, out_dir, most_specific: bool):
+def eval_iptc_codes_macro_acc(
+    doc_sets: Iterable[DocumentSet], out_dir: Path, most_specific: bool
+):
+    """Evaluate agreement accuracy of IPTC code annotations and write the results to `out_dir`.
+
+    If most_specific is true, consider the most specific labels annotated. If False, resolve the labels to their most general equivalents.
+    """
     m = []
     scores = []
     for gold_annr, pred_annr, score in collect_scores_over_pairs(
@@ -77,7 +96,13 @@ def eval_iptc_codes_macro_acc(doc_sets, out_dir, most_specific: bool):
         f.write("\n".join(m))
 
 
-def eval_iptc_codes_micro_prf(doc_sets, out_dir, most_specific: bool):
+def eval_iptc_codes_micro_prf(
+    doc_sets: Iterable[DocumentSet], out_dir: Path, most_specific: bool
+):
+    """Evaluate precision, recall and f-score of IPTC code annotations and write the results to `out_dir`.
+
+    If most_specific is true, consider the most specific labels annotated. If False, resolve the labels to their most general equivalents.
+    """
     m = []
     scores = []
     for gold_annr, pred_annr, score in collect_scores_over_pairs(
@@ -86,7 +111,6 @@ def eval_iptc_codes_micro_prf(doc_sets, out_dir, most_specific: bool):
         scores.append(score)
         m.append(f"{gold_annr} - {pred_annr}: {score}")
         m = sorted(m)
-    # m.append(f"Mean over all pairs: {mean(scores)}")
     with open(out_dir / "iptc_iaa_micro_prf.txt", "w") as f:
         f.write("\n".join(m))
 
@@ -117,11 +141,11 @@ def get_doc_set(doc_dir: Path) -> DocumentSet:
 
 
 def check_extract(zip: Path, target: Path) -> None:
-    """Extract `zip_p` to `target` if this has not been done already."""
+    """Extract `zip` to `target` if this has not been done already."""
     if not target.exists():
         target.mkdir()
         logger.info(f"Extracting zip to {target}")
         with ZipFile(zip) as z:
             z.extractall(target)
     else:
-        logger.info(f"Found existing data dir: {target}")
+        logger.info(f"Found existing data dir: {target}. Skipping extraction.")

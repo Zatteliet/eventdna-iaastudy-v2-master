@@ -1,16 +1,14 @@
 
 Todo:
   ✔ Do restricted and unrestricted run at same time -- remove option from main @done(22-02-17 10:40)
-  ☐ Do IPTC run separately
-    Necessary?
   ☐ Write Readme correctly
+  ☐ Write reqs
   Document all .py files:
-    ✔ alpino_heads.py @done(22-02-17 11:22)
-    ✔ def.py @done(22-02-17 11:23)
-    ✔ event_cms.py @done(22-02-17 11:15)
-    ☐ iaastudy.py
-      ☐ Is it necessary at all to write out the averaged CM scores? Do we use that?
-    ✔ iptc_cms.py @done(22-02-17 11:48)
-    ✔ match_fns.py @done(22-02-17 11:26)
-    ✔ util.py @done(22-02-17 11:47)
+    ✔ alpino_heads.py @done(22-03-17 15:49)
+    ✔ defs.py @done(22-03-17 15:50)
+    ✔ event_cms.py @done(22-03-17 15:51)
+    ✔ iaastudy.py @done(22-03-17 15:56)
+    ☐ iptc_cms.py
+    ☐ match_fns.py
+    ☐ util.py
 

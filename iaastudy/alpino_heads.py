@@ -1,5 +1,6 @@
 """Classes and functions to read Alpino parse trees and determine what the heads are in EventDNA annotations."""
 
+from pathlib import Path
 import xml.etree.ElementTree as ET
 
 
@@ -8,7 +9,7 @@ class AlpinoTreeHandler:
     Provides methods to find which tokens are heads.
     """
 
-    def __init__(self, alpino_file):
+    def __init__(self, alpino_file: Path):
         self.tree = ET.parse(alpino_file)
         self.nodes_to_parents = {c: p for p in self.tree.iter() for c in p}
 
@@ -22,12 +23,14 @@ class AlpinoTreeHandler:
                 break
 
     def find_head_leaves(self, restricted_mode: bool):
-        """Depth-search through the tree. Only leaves are returned."""
+        """Depth-search through the tree. Only head leaves are returned.
+        If `restricted_mode` is True, only return heads that are not part of modifiers.
+        """
 
         def check_stop(node, restricted_mode: bool):
             """If a node gets a True check here, search stops at that node and doesn't travel deeper in the tree."""
             if restricted_mode:
-                if node.get("cat") in ["ap", "advp", "pp"]:  # "pp", "advp"
+                if node.get("cat") in ["ap", "advp", "pp"]:
                     return True
                 if node.get("rel") == "mod":
                     return True
@@ -74,9 +77,11 @@ class AlpinoTreeHandler:
 
         return found
 
-    def head_vector(self, restricted_mode):
+    def head_vector(self, restricted_mode: bool):
         """Given an alpino tree, give a binary vector mapping over the tokens of the sentence described by the tree, such that 1 indicates that a token is part of a head node.
         e.g. [0, 1, 0, 1, 0, 0] --> tokens at index 1 and 3 are part of head nodes over the sentence.
+
+        If `restricted_mode` is True, only return heads that are not part of modifiers.
         """
 
         def is_leaf(node):
@@ -115,10 +120,10 @@ class AlpinoTreeHandler:
         return head_flags
 
 
-def add_heads(dnaf, alpino_dir, restricted_mode) -> None:
-    """Add head set info to the event annotations found in the given DNAF.
-    
-    This information is represented as a set of token indices.
+def add_heads(dnaf: dict, alpino_dir: Path, restricted_mode: bool) -> None:
+    """Add head set info to the event annotations found in the given DNAF json-style dict. This information is represented as a set of token indices.
+
+    If `restricted_mode` is True, only consider heads that are not part of modifiers.
     """
 
     # Get a dict of sentence numbers to the correct head vector.

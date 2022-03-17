@@ -1,6 +1,6 @@
 from itertools import combinations
 from statistics import mean
-from typing import Iterable
+from typing import Iterable, List
 
 from pycm import ConfusionMatrix
 
@@ -8,7 +8,7 @@ from iaastudy.defs import ANNOTATORS, DocumentSet
 from sklearn.preprocessing import MultiLabelBinarizer
 
 
-def get_iptc_codes(dnaf, most_specific: bool):
+def get_iptc_codes(dnaf: dict, most_specific: bool):
     """Yield IPTC annotations on the given dnaf document.
     Only yield the certain annotations, not the uncertain ones.
     If `most_specific` is True, return the most specific topic in the chain; else, return the most general one.
@@ -48,12 +48,16 @@ def get_accuracy(gold_codes, pred_codes):
     mlb = MultiLabelBinarizer()
     g, p = mlb.fit_transform([gold_codes, pred_codes])
     cm = ConfusionMatrix(g, p)
+
+    # The cm sometimes encodes the positive class as a string rather than an int.
     if not 1 in cm.ACC:
         return cm.ACC["1"]
     return cm.ACC[1]
 
 
-def micro_avg_prf_score(gold_dnafs, pred_dnafs, most_specific: bool) -> dict:
+def micro_avg_prf_score(
+    gold_dnafs: List[dict], pred_dnafs: List[dict], most_specific: bool
+) -> dict:
     """Return micro-average PRF scores comparing gold and pred `dnaf` documents."""
     mlb = MultiLabelBinarizer()
     flat_gold_vector = []
@@ -74,7 +78,7 @@ def micro_avg_prf_score(gold_dnafs, pred_dnafs, most_specific: bool) -> dict:
     return scores
 
 
-def macro_avg_acc_score(gold_dnafs, pred_dnafs, most_specific: bool) -> float:
+def macro_avg_acc_score(gold_dnafs: List[dict], pred_dnafs: List[dict], most_specific: bool) -> float:
     """Return macro-averaged accuracy scores comparing gold and pred `dnaf` documents."""
     scores = []
     for gold_dnaf, pred_dnaf in zip(gold_dnafs, pred_dnafs):
