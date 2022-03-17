@@ -85,7 +85,6 @@ def macro_avg_acc_score(gold_dnafs: List[dict], pred_dnafs: List[dict], most_spe
         g = get_iptc_codes(gold_dnaf, most_specific)
         p = get_iptc_codes(pred_dnaf, most_specific)
         scores.append(get_accuracy(g, p))
-        scores.append(get_accuracy(g, p))
     return mean(scores)
 
 
