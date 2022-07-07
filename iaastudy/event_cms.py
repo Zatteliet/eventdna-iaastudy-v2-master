@@ -1,14 +1,16 @@
 import itertools
+import logging
 from pathlib import Path
 from statistics import mean
 from typing import Callable, Iterable
 
-from loguru import logger
 from pycm import ConfusionMatrix
 from pycm.pycm_obj import pycmVectorError
 
 from iaastudy.defs import ANNOTATORS, DocumentSet, Layer
 from iaastudy.util import filter_out, map_over_leaves, merge_list
+
+logger = logging.getLogger(__name__)
 
 FOUND = "Found"
 NOT_FOUND = "Not found"
@@ -48,7 +50,7 @@ def collect_cms(
 
         cm.name = f"{gold_annr} - {pred_annr}"
 
-        logger.success("Constructed cm: " + cm.name)
+        logger.info("Constructed cm: " + cm.name)
         yield cm
 
 
