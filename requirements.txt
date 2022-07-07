@@ -1,9 +1,8 @@
-art==5.5
+art==5.7
 joblib==1.1.0
-loguru==0.6.0
-numpy==1.22.3
-pycm==3.4
-scikit-learn==1.0.2
-scipy==1.8.0
+numpy==1.23.0
+pycm==3.5
+scikit-learn==1.1.1
+scipy==1.8.1
 sklearn==0.0
 threadpoolctl==3.1.0
