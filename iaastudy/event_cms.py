@@ -50,7 +50,7 @@ def collect_cms(
 
         cm.name = f"{gold_annr} - {pred_annr}"
 
-        logger.success("Constructed cm: " + cm.name)
+        logger.info("Constructed cm: " + cm.name)
         yield cm
 
 

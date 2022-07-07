@@ -10,6 +10,9 @@ from iaastudy.defs import ANNOTATORS, DocumentSet, Layer
 
 logger = logging.getLogger(__name__)
 
+ZIP = Path("assets/iaa_set_dnaf.zip")
+DATA_DIR = Path("extracted")
+
 
 def run_iaa_study(
     data_zip: Path,
@@ -30,12 +33,22 @@ def run_iaa_study(
         most_specific (bool): If True, the most specific annotated IPTC codes will be used for IPTC match evaluation. If False, the codes will be generalized to their top-level equivalents.
     """
 
-    # Extract and read in the annotated data.
-    prepare(out_dir)
-    data_dir = data_zip.with_suffix("")
-    check_extract(data_zip, data_dir)
+    # Extract the zipped data if needed.
+    if not DATA_DIR.exists():
+        DATA_DIR.mkdir()
+        logger.info(f"Extracting corpus to {DATA_DIR}")
+        with ZipFile(ZIP) as z:
+            z.extractall(DATA_DIR)
+    else:
+        if len(list(DATA_DIR.iterdir())) == 0:
+            raise ValueError(
+                f"No data files found in {DATA_DIR.resolve()}. Delete this dir to allow unzipping."
+            )
+        logger.info(f"Using existing data dir: {DATA_DIR}")
+
+    # Read in the annotated data.
     doc_sets: list[DocumentSet] = list(
-        get_doc_set(d) for d in data_dir.iterdir()
+        get_doc_set(d) for d in DATA_DIR.iterdir()
     )
     logger.info(f"Read in {len(doc_sets)} sets of 4 annotated docs each.")
 
@@ -49,7 +62,7 @@ def run_iaa_study(
     eval_iptc_codes_macro_acc(doc_sets, out_dir, most_specific)
     eval_iptc_codes_micro_prf(doc_sets, out_dir, most_specific)
 
-    logger.success(f"All done. Wrote to {out_dir}")
+    logger.info(f"All done. Wrote to {out_dir}")
 
 
 def eval_event_spans(
@@ -117,14 +130,6 @@ def eval_iptc_codes_micro_prf(
         f.write("\n".join(m))
 
 
-def prepare(out_dir: Path) -> None:
-    """Create `out_dir`. It it already exists, delete its contents."""
-    if out_dir.exists():
-        logger.warning("Out dir already exists. Cleaning it...")
-        util.delete_contents(out_dir)
-    out_dir.mkdir(exist_ok=True)
-
-
 def get_doc_set(doc_dir: Path) -> DocumentSet:
     """Parse a directory consisting of 4 annotated documents (one per annotator) and a directory with Alpino data."""
 
@@ -140,14 +145,3 @@ def get_doc_set(doc_dir: Path) -> DocumentSet:
         dnafs={annr: get_dnaf(annr) for annr in ANNOTATORS},
         alpino=doc_dir / "alpino",
     )
-
-
-def check_extract(zip: Path, target: Path) -> None:
-    """Extract `zip` to `target` if this has not been done already."""
-    if not target.exists():
-        target.mkdir()
-        logger.info(f"Extracting zip to {target}")
-        with ZipFile(zip) as z:
-            z.extractall(target)
-    else:
-        logger.info(f"Found existing data dir: {target}. Skipping extraction.")
