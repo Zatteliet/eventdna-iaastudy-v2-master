@@ -1,16 +1,14 @@
 import json
+import logging
 from pathlib import Path
+from statistics import mean
 from typing import Callable, Iterable
 from zipfile import ZipFile
 
-from loguru import logger
-
-from iaastudy.alpino_heads import add_heads
-from iaastudy.event_cms import avg_cm_scores, collect_cms, write_report
+from iaastudy import alpino_heads, event_cms, iptc_cms, util
 from iaastudy.defs import ANNOTATORS, DocumentSet, Layer
-from iaastudy.util import delete_contents
-from iaastudy.iptc_cms import collect_scores_over_pairs
-from statistics import mean
+
+logger = logging.getLogger(__name__)
 
 
 def run_iaa_study(
@@ -44,7 +42,7 @@ def run_iaa_study(
     # Augment events in the data with their head sets.
     for doc_set in doc_sets:
         for dnaf in doc_set.dnafs.values():
-            add_heads(dnaf, doc_set.alpino, restricted_mode)
+            alpino_heads.add_heads(dnaf, doc_set.alpino, restricted_mode)
 
     # Perform evaluations.
     eval_event_spans(doc_sets, match_fn, out_dir)
@@ -61,7 +59,9 @@ def eval_event_spans(
 
     # Get confusion matrices and scores to do event span IAA.
     cms = list(
-        collect_cms(doc_sets=doc_sets, layer=Layer.EVENTS, match_fn=match_fn)
+        event_cms.collect_cms(
+            doc_sets=doc_sets, layer=Layer.EVENTS, match_fn=match_fn
+        )
     )
 
     # Write out the cms.
@@ -70,12 +70,12 @@ def eval_event_spans(
         cm.save_html(str(p))
 
     # Average the scores over all annotator pairs. Write out.
-    for score_name, vals in avg_cm_scores(cms).items():
+    for score_name, vals in event_cms.avg_cm_scores(cms).items():
         with open((out_dir / score_name).with_suffix(".json"), "w") as f:
             json.dump(vals, f, indent=4, sort_keys=True)
 
     # Write a more straightforward score report.
-    write_report(cms, out_dir / "f1_prec_rec.txt")
+    event_cms.write_report(cms, out_dir / "f1_prec_rec.txt")
 
 
 def eval_iptc_codes_macro_acc(
@@ -87,7 +87,7 @@ def eval_iptc_codes_macro_acc(
     """
     m = []
     scores = []
-    for gold_annr, pred_annr, score in collect_scores_over_pairs(
+    for gold_annr, pred_annr, score in iptc_cms.collect_scores_over_pairs(
         doc_sets, most_specific, macro=True
     ):
         scores.append(score)
@@ -107,7 +107,7 @@ def eval_iptc_codes_micro_prf(
     """
     m = []
     scores = []
-    for gold_annr, pred_annr, score in collect_scores_over_pairs(
+    for gold_annr, pred_annr, score in iptc_cms.collect_scores_over_pairs(
         doc_sets, most_specific, macro=False
     ):
         scores.append(score)
@@ -121,7 +121,7 @@ def prepare(out_dir: Path) -> None:
     """Create `out_dir`. It it already exists, delete its contents."""
     if out_dir.exists():
         logger.warning("Out dir already exists. Cleaning it...")
-        delete_contents(out_dir)
+        util.delete_contents(out_dir)
     out_dir.mkdir(exist_ok=True)
 
 
